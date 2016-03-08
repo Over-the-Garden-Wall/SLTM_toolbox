@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1457400945 source:c:\users\kagami\documents\cpp\sltm\msltm\main.cpp
+	<iostream>
+	<vector>
+	<stdlib.h>
+	<time.h>
+	<math.h>
+
