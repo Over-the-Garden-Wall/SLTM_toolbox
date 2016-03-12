@@ -107,12 +107,14 @@ public:
         return result;
     }
 
-    void pwise_fxn(float (*fxn)(float)) {
+    Matrix pwise_fxn(float (*fxn)(float)) {
+        Matrix result = (*this);
         for (size_t y = 0; y < rows; y++) {
             for (size_t x = 0; x < cols; x++) {
-                (*this)[y][x] = fxn((*this)[y][x]);
+                result[y][x] = fxn((*this)[y][x]);
             }
         }
+        return result;
     }
 
     void cat(Matrix B, int dim) {
@@ -134,7 +136,25 @@ public:
 
 };
 
+class NN_layer {
 
+    Matrix weight;
+    Matrix bias;
+    Matrix input;
+    Matrix output;
+
+public:
+
+    NN_layer() {}
+
+    NN_layer(size_t input_length, size_t output_length) {
+        weight.allocate(input_length, output_length);
+        bias.allocate(1, output_length);
+    }
+
+    run(Matrix input)
+
+};
 
 class Memory_cell {
 
@@ -152,52 +172,76 @@ public:
 
         size_t gate_in_length = input_length + output_length;
 
-        forget_W.allocate(output_length, gate_in_length);
-        input_W.allocate(output_length, gate_in_length);
-        cand_W.allocate(output_length, gate_in_length);
-        out_W.allocate(output_length, gate_in_length);
+        forget_W.allocate(gate_in_length, output_length);
+        input_W.allocate(gate_in_length, output_length);
+        cand_W.allocate(gate_in_length, output_length);
+        out_W.allocate(gate_in_length, output_length);
 
-        cell_in.allocate(output_length, 1);
-        h_in.allocate(output_length, 1);
-        h_out.allocate(output_length, 1);
+        cell_in.allocate(1, output_length);
+        h_in.allocate(1, output_length);
+        h_out.allocate(1, output_length);
 
 
-        forget_bias.allocate(output_length, 1);
-        input_bias.allocate(output_length, 1);
-        cand_bias.allocate(output_length, 1);
-        out_bias.allocate(output_length, 1);
+        forget_bias.allocate(1, output_length);
+        input_bias.allocate(1, output_length);
+        cand_bias.allocate(1, output_length);
+        out_bias.allocate(1, output_length);
 
-        gate_in.allocate(gate_in_length, 1);
+        gate_in.allocate(1, gate_in_length);
     }
 
 
     Matrix forward_pass( Matrix x_in ) {
 
         gate_in = x_in;
-        gate_in.cat(h_in, 1);
+        gate_in.cat(h_in, 2);
 
 
-        forget_out = forget_W.multiply(gate_in) + forget_bias;
-        forget_out.pwise_fxn(&logsig);
+        forget_out = gate_in.multiply(forget_W) + forget_bias;
 
-        input_act = input_W.multiply(gate_in) + input_bias;
-        input_act.pwise_fxn(&logsig);
+        input_act = gate_in.multiply(input_W) + input_bias;
 
-        cand_act = cand_W.multiply(gate_in) + cand_bias;
-        cand_act.pwise_fxn(&tanhf);
+        cand_act = gate_in.multiply(cand_W) + cand_bias;
 
-        cell_out = cand_act * input_act + cell_in * forget_out;
+        output_act = gate_in.multiply(out_W) + out_bias;
 
 
-        output_act = out_W.multiply(gate_in) + out_bias;
-        output_act.pwise_fxn(&logsig);
+        cell_out = cand_act.pwise_fxn(&tanhf) * input_act.pwise_fxn(&logsig) + cell_in * forget_out.pwise_fxn(&logsig);
 
         cell_tanh = cell_out;
         cell_tanh.pwise_fxn(&tanhf);
 
-        h_out = output_act * cell_tanh;
+        h_out = output_act.pwise_fxn(&logsig) * cell_tanh;
 
         return h_out;
+    }
+
+    void backward_pass( Matrix err ) {
+
+        dout_d
+
+
+
+        gate_in = x_in;
+        gate_in.cat(h_in, 1);
+
+
+        forget_out = forget_W.multiply(gate_in) + forget_bias;
+
+        input_act = input_W.multiply(gate_in) + input_bias;
+
+        cand_act = cand_W.multiply(gate_in) + cand_bias;
+
+        output_act = out_W.multiply(gate_in) + out_bias;
+
+
+        cell_out = cand_act.pwise_fxn(&tanhf) * input_act.pwise_fxn(&logsig) + cell_in * forget_out.pwise_fxn(&logsig);
+
+        cell_tanh = cell_out;
+        cell_tanh.pwise_fxn(&tanhf);
+
+        h_out = output_act.pwise_fxn(&logsig) * cell_tanh;
+
     }
 };
 
